@@ -35,7 +35,12 @@ def test_receipt_export_does_not_inherit_shared_folder_read_access(tmp_path):
     raw = acl.read_bytes()
     sddl = raw.decode("utf-16-le" if b"\0" in raw else "utf-8-sig")
     trustees = re.findall(r"\(A;[^)]*;;;([^)]*)\)", sddl)
-    assert set(trustees) == {owner_sid(), "SY"}, sddl
+    owner = owner_sid()
+    # SDDL writes the built-in Administrator account (RID 500) as "LA". The
+    # GitHub Windows runner runs as that account.
+    if owner.endswith("-500"):
+        owner = "LA"
+    assert set(trustees) == {owner, "SY"}, sddl
     assert ";;;WD)" not in sddl and ";ID;" not in sddl
     assert json.loads(receipt.read_text())["withdrawal_token"] == "fixture-only-not-a-real-secret"
 
